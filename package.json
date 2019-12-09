@@ -1,5 +1,5 @@
 {
-  "name": "@ajaybhatia/react-native-meteor",
+  "name": "react-native-meteor",
   "version": "1.6.3",
   "description": "Full Meteor Client for React Native",
   "main": "src/Meteor.js",
