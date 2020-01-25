@@ -68,6 +68,12 @@ module.exports = {
       });
     });
   },
+  getNewToken(callback = () => {}) {
+    call('getNewToken', (err, res) => {
+      if (err) return callback(err);
+      this._handleLoginCallback(err, res);
+    });
+  },
   _login(user, callback) {
     this._startLoggingIn();
     this.call('login', user, (err, result) => {
