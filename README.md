@@ -24,54 +24,33 @@ npm i --save @ajaybhatia/react-native-meteor
 
 [!! See detailed installation guide](https://github.com/ajaybhatia/react-native-meteor/blob/master/docs/Install.md)
 
-## Compatibility notes
-
-Since RN 0.26.0 you have to use ws or wss protocol to connect to your meteor server. http is not working on Android.
-
-It is recommended to always use the latest version of react-native-meteor compatible with your RN version:
-
-- For RN > 0.49, use `react-native-meteor@latest`
-- For RN > 0.45, use `react-native-meteor@1.1.x`
-- For RN = 0.45, use `react-native-meteor@1.0.6`
-- For RN < 0.45, you can use version `react-native-meteor@1.0.3` in case or problems.
-
-`Meteor.Collection().find()` (for backwards compatibility) returns documents. If you are used to the usual Meteor find usage (`find().fetch()`), and want `Meteor.Collection().find()` to return a cursor instead, please see the [cursoredFind option](https://github.com/ajaybhatia/react-native-meteor/blob/master/docs/api.md#meteorcollectioncollectionname-options)
-
 ### Warning < RN 0.57.8 Android bug
 
 There was a [bug in the react native websocket android implementation](https://github.com/react-native-community/react-native-releases/blob/master/CHANGELOG.md#android-specific) that meant the close event wasn't being received from the server. Therefore RN versions prior to React-native 0.57.8 will not detect users being logged out from the server side. There could also be other bugs resulting from this.
 
-## Example usage
+## Example usage (with withTracker)
 
 ```javascript
-import React, { Component } from 'react';
-import { View, Text } from 'react-native';
-import Meteor, { withTracker, MeteorListView } from '@ajaybhatia/react-native-meteor';
+import React from 'react';
+import { View, Text, FlatList } from 'react-native';
+import Meteor, { withTracker } from '@ajaybhatia/react-native-meteor';
 
 Meteor.connect('ws://192.168.X.X:3000/websocket'); //do this only once
 
-class App extends Component {
-  renderRow(todo) {
-    return <Text>{todo.title}</Text>;
-  }
-  render() {
-    const { settings, todosReady } = this.props;
+const App = ({ settings, todos, todosReady }) => {
+  return (
+    <View>
+      <Text>{settings.title}</Text>
+      {!todosReady && <Text>Not ready</Text>}
 
-    return (
-      <View>
-        <Text>{settings.title}</Text>
-        {!todosReady && <Text>Not ready</Text>}
-
-        <MeteorListView
-          collection="todos"
-          selector={{ done: true }}
-          options={{ sort: { createdAt: -1 } }}
-          renderRow={this.renderRow}
-        />
-      </View>
-    );
-  }
-}
+      <FlatList
+        data={todos}
+        keyExtractor={item => item._id}
+        renderItem={({ item }) => <Text>{item.title}</Text>}
+      />
+    </View>
+  );
+};
 
 export default withTracker(params => {
   const handle = Meteor.subscribe('todos');
@@ -79,9 +58,57 @@ export default withTracker(params => {
 
   return {
     todosReady: handle.ready(),
+    todos: Meteor.collection('todos').find({}, { sort: { createdAt: -1 } }),
     settings: Meteor.collection('settings').findOne(),
   };
 })(App);
+```
+
+## Example usage (with useTracker hook)
+
+```javascript
+import React from 'react';
+import { View, Text, FlatList } from 'react-native';
+import Meteor, { useTracker } from '@ajaybhatia/react-native-meteor';
+
+Meteor.connect('ws://192.168.X.X:3000/websocket'); //do this only once
+
+export default App = () => {
+  const loading = useTracker(() => {
+    const handle = Meteor.subscribe('todos');
+    Meteor.subscribe('settings');
+
+    return !handle.ready();
+  }, []);
+
+  const todos = useTracker(
+    () => Meteor.collection('todos').find({}, { sort: { createdAt: -1 } }),
+    [loading]
+  );
+  const settings = useTracker(() => Meteor.collection('settings').findOne(), [
+    loading,
+  ]);
+
+  if (loading) {
+    return (
+      <View>
+        <Text>Not ready</Text>
+      </View>
+    );
+  }
+
+  return (
+    <View>
+      {loading && <Text>Not ready</Text>}
+
+      <FlatList
+        data={todos}
+        keyExtractor={item => item._id}
+        renderItem={({ item }) => <Text>{item.title}</Text>}
+      />
+    </View>
+  );
+};
 ```
 
 ## Documentation
